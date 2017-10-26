@@ -25,7 +25,7 @@ namespace IoTEdgeFridgeSimulator
 
         Dictionary<string, string> properties = new Dictionary<string, string>{
             {"source", SensorTypes.TEMPERATURE},
-            {"macAddress", "01:01:01:01:01:01"},
+            {"macAddress", "04:04:04:04:04:04"},
         };
 
         public void Create(Broker broker, byte[] configuration)
@@ -36,15 +36,11 @@ namespace IoTEdgeFridgeSimulator
 
         public void Start()
         {
-            Dictionary<string, string> properties = new Dictionary<string, string>();
-            properties.Add("source", "Temperature");
-            properties.Add("macAddress", "01:01:01:01:01:01");
-
             var payload = new Payload
             {
                 Id = System.Guid.NewGuid().ToString(),
                 MessageId = messageId++,
-                Value = this.insideTemperature
+                Value = RandomNoise.NoisyReading(this.insideTemperature)
             };
             var json = JsonConvert.SerializeObject(payload);
             this.broker.Publish(new Message(json, properties));
@@ -72,14 +68,15 @@ namespace IoTEdgeFridgeSimulator
             else if (msg.Properties["source"] == SensorTypes.THERMOSTAT)
             {
                 // Temp should go up minimally
-                this.outsideTemperature += 0.001 * receivedData.Value;
+                this.outsideTemperature = receivedData.Value;
+                this.insideTemperature += 0.001 * receivedData.Value;
             }
 
             var payload = new Payload
             {
                 Id = System.Guid.NewGuid().ToString(),
                 MessageId = messageId++,
-                Value = this.insideTemperature
+                Value = RandomNoise.NoisyReading(this.insideTemperature)
             };
             var json = JsonConvert.SerializeObject(payload);
             this.broker.Publish(new Message(json, properties));

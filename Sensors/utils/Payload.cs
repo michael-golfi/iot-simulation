@@ -12,5 +12,9 @@ namespace IoTEdgeFridgeSimulator.Utils
 
         [JsonProperty(PropertyName = "value")]
         public double Value { get; set; }
+        /// Terrible design idea
+        /// This needs to be rethought
+        [JsonProperty(PropertyName = "boolValue")]
+        public bool BoolValue { get; set; }
     }
 }

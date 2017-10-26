@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using IoTEdgeFridgeSimulator.Utils;
 using Microsoft.Azure.Devices.Gateway;
 using Newtonsoft.Json;
 
@@ -19,7 +20,12 @@ namespace IoTEdgeFridgeSimulator
     {
         private Broker broker;
         private string configuration;
-        private int messageCount;
+        private int messageId = 0;
+        private double outsideTemperature = 20;
+        Dictionary<string, string> properties = new Dictionary<string, string>{
+            {"source", SensorTypes.THERMOSTAT},
+            {"macAddress", "05:05:05:05:05:05"},
+        };
 
         public void Create(Broker broker, byte[] configuration)
         {
@@ -29,29 +35,48 @@ namespace IoTEdgeFridgeSimulator
 
         public void Start()
         {
+            var payload = new Payload
+            {
+                Id = System.Guid.NewGuid().ToString(),
+                MessageId = messageId++,
+                Value = RandomNoise.NoisyReading(this.outsideTemperature)
+            };
+            var json = JsonConvert.SerializeObject(payload);
+            this.broker.Publish(new Message(json, properties));
         }
 
         public void Destroy()
         {
         }
 
-        public void Receive(Message received_message)
+        public void Receive(Message msg)
         {
-            string recMsg = Encoding.UTF8.GetString(received_message.Content, 0, received_message.Content.Length);
-            BleData receivedData = JsonConvert.DeserializeObject<BleData>(recMsg);
+            string recMsg = Encoding.UTF8.GetString(msg.Content, 0, msg.Content.Length);
+            Payload receivedData = JsonConvert.DeserializeObject<Payload>(recMsg);
 
-            float temperature = float.Parse(receivedData.Temperature, CultureInfo.InvariantCulture.NumberFormat); 
-            Dictionary<string, string> receivedProperties = received_message.Properties;
+            // TODO - Inject arbitary temperature changes too
 
-            Dictionary<string, string> properties = new Dictionary<string, string>();
-            properties.Add("source", receivedProperties["source"]);
-            properties.Add("macAddress", receivedProperties["macAddress"]);
-            properties.Add("temperatureAlert", temperature > 30 ? "true" : "false");
+            if (msg.Properties["source"] == SensorTypes.DOOR)
+            {
+                // When the door is open, outside temp should equalize with fridge temp
+                // Outside temp should slightly drop
+                this.outsideTemperature *= 0.999;
+            }
+            else if (msg.Properties["source"] == SensorTypes.POWER)
+            {
+                // Compressor is on, outside temp rises
+                this.outsideTemperature *= 1.001;
+            }
 
-            String content = String.Format("{0} \"deviceId\": \"Intel NUC Gateway\", \"messageId\": {1}, \"temperature\": {2} {3}", "{", ++this.messageCount, temperature, "}");
-            Message messageToPublish = new Message(content, properties);
-
-            this.broker.Publish(messageToPublish);
+            var payload = new Payload
+            {
+                Id = System.Guid.NewGuid().ToString(),
+                MessageId = messageId++,
+                Value = RandomNoise.NoisyReading(this.outsideTemperature)
+            };
+            var json = JsonConvert.SerializeObject(payload);
+            this.broker.Publish(new Message(json, properties));
         }
+
     }
 }

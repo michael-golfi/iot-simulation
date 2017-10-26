@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using IoTEdgeFridgeSimulator.Utils;
 using Microsoft.Azure.Devices.Gateway;
 using Newtonsoft.Json;
 
@@ -19,8 +20,14 @@ namespace IoTEdgeFridgeSimulator
     {
         private Broker broker;
         private string configuration;
-        private int messageCount;
-        
+        private int messageId;
+        private double moisture = Initial.MOISTURE;
+
+        Dictionary<string, string> properties = new Dictionary<string, string>{
+            {"source", SensorTypes.MOISTURE},
+            {"macAddress", "02:02:02:02:02:02"},
+        };
+
         public void Create(Broker broker, byte[] configuration)
         {
             this.broker = broker;
@@ -35,21 +42,41 @@ namespace IoTEdgeFridgeSimulator
         {
         }
 
-        public void Receive(Message received_message)
+        public void Receive(Message msg)
         {
-            string recMsg = Encoding.UTF8.GetString(received_message.Content, 0, received_message.Content.Length);
-            BleData receivedData = JsonConvert.DeserializeObject<BleData>(recMsg);
+            string recMsg = Encoding.UTF8.GetString(msg.Content, 0, msg.Content.Length);
+            Payload receivedData = JsonConvert.DeserializeObject<Payload>(recMsg);
 
-            float temperature = float.Parse(receivedData.Temperature, CultureInfo.InvariantCulture.NumberFormat); 
-            Dictionary<string, string> receivedProperties = received_message.Properties;
+            if (msg.Properties["source"] == SensorTypes.DOOR)
+            {
+                // Moisture should increase
+                // TODO - Figure out how moisture increases when door opens
+                // this.moisture *= ; 
+            }
+            else if (msg.Properties["source"] == SensorTypes.POWER)
+            {
+                // Compressor is on, moisture drops
+                // this.moisture *= ;
+            }
+            else if (msg.Properties["source"] == SensorTypes.TEMPERATURE)
+            {
+                // Inject failure for broken seal?
+                // Temp increases, moisture increases
+                // this.moisture *= ;
+            }
+            else if (msg.Properties["source"] == SensorTypes.THERMOSTAT)
+            {
+                // Inject failure for broken seal?
+            }
 
-            Dictionary<string, string> properties = new Dictionary<string, string>();
-            properties.Add("source", receivedProperties["source"]);
-            properties.Add("macAddress", receivedProperties["macAddress"]);
-            properties.Add("temperatureAlert", temperature > 30 ? "true" : "false");
-
-            String content = String.Format("{0} \"deviceId\": \"Intel NUC Gateway\", \"messageId\": {1}, \"temperature\": {2} {3}", "{", ++this.messageCount, temperature, "}");
-            this.broker.Publish(new Message(content, properties));
+            var payload = new Payload
+            {
+                Id = System.Guid.NewGuid().ToString(),
+                MessageId = messageId++,
+                Value = RandomNoise.NoisyReading(this.moisture)
+            };
+            var json = JsonConvert.SerializeObject(payload);
+            this.broker.Publish(new Message(json, properties));
         }
     }
 }

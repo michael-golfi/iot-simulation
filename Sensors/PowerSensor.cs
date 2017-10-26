@@ -21,13 +21,10 @@ namespace IoTEdgeFridgeSimulator
         private Broker broker;
         private string configuration;
         private int messageId;
-        private const double idleWattage = 0.001;
-        private const double voltage = 120;
-        private const double current = 6;
 
         Dictionary<string, string> properties = new Dictionary<string, string>{
             {"source", SensorTypes.POWER},
-            {"macAddress", "02:02:02:02:02:02"},
+            {"macAddress", "03:03:03:03:03:03"},
         };
 
         public void Create(Broker broker, byte[] configuration)
@@ -38,6 +35,14 @@ namespace IoTEdgeFridgeSimulator
 
         public void Start()
         {
+            var payload = new Payload
+            {
+                Id = System.Guid.NewGuid().ToString(),
+                MessageId = messageId++,
+                Value = RandomNoise.NoisyReading(Initial.POWER_LOW)
+            };
+            var json = JsonConvert.SerializeObject(payload);
+            this.broker.Publish(new Message(json, properties));
         }
 
         public void Destroy()
@@ -48,12 +53,10 @@ namespace IoTEdgeFridgeSimulator
         {
             string recMsg = Encoding.UTF8.GetString(msg.Content, 0, msg.Content.Length);
             Payload receivedData = JsonConvert.DeserializeObject<Payload>(recMsg);
-            double wattage = idleWattage;
+            double wattage = Initial.POWER_LOW;
 
             if (msg.Properties["source"] == SensorTypes.TEMPERATURE)
-            {
-                wattage = (receivedData.Value > 6.0) ? voltage * current : idleWattage;
-            }
+                wattage = (receivedData.Value > 6.0) ? Initial.POWER_HIGH : Initial.POWER_LOW;
 
             var payload = new Payload
             {

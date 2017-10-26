@@ -4,6 +4,7 @@ namespace IoTEdgeFridgeSimulator.Utils
     {
         private static uint m_z;
         private static uint m_w;
+        private const double BOOL_THRESHOLD = 0.05;
 
         private static uint GetUint()
         {
@@ -23,9 +24,27 @@ namespace IoTEdgeFridgeSimulator.Utils
             return ((((u + 1.0) * 2.328306435454494e-10) - 0.5) / 10);
         }
 
+        public static double GetUniformUnsigned()
+        {
+            // 0 <= u < 2^32
+            uint u = GetUint();
+            // The magic number below is 1/(2^32 + 2).
+            // The result is strictly between 0 and 1.
+            return (u + 1.0) * 2.328306435454494e-10;
+        }
+
         public static double NoisyReading(double value)
         {
             return value + value * GetUniform();
+        }
+
+        public static bool NoisyReading(bool value)
+        {
+            // InRange ^ true value = false
+            // NotInRange ^ true value = false
+            // InRange ^ false value = true
+            // NotInRange ^ false value = false 
+            return value ^ (GetUniform() < BOOL_THRESHOLD || GetUniform() > (1 - BOOL_THRESHOLD));
         }
     }
 }
