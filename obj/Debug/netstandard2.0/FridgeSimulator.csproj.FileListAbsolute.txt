@@ -1,0 +1,3 @@
+C:\Users\Michael\work\iot-consumption\obj\Debug\netstandard2.0\FridgeSimulator.csproj.CoreCompileInputs.cache
+C:\Users\Michael\work\iot-consumption\obj\Debug\netstandard2.0\FridgeSimulator.AssemblyInfoInputs.cache
+C:\Users\Michael\work\iot-consumption\obj\Debug\netstandard2.0\FridgeSimulator.AssemblyInfo.cs

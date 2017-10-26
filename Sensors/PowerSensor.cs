@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using IoTEdgeFridgeSimulator.Utils;
 using Microsoft.Azure.Devices.Gateway;
 using Newtonsoft.Json;
 
@@ -19,7 +20,15 @@ namespace IoTEdgeFridgeSimulator
     {
         private Broker broker;
         private string configuration;
-        private int messageCount;
+        private int messageId;
+        private const double idleWattage = 0.001;
+        private const double voltage = 120;
+        private const double current = 6;
+
+        Dictionary<string, string> properties = new Dictionary<string, string>{
+            {"source", SensorTypes.POWER},
+            {"macAddress", "02:02:02:02:02:02"},
+        };
 
         public void Create(Broker broker, byte[] configuration)
         {
@@ -35,23 +44,25 @@ namespace IoTEdgeFridgeSimulator
         {
         }
 
-        public void Receive(Message received_message)
+        public void Receive(Message msg)
         {
-            string recMsg = Encoding.UTF8.GetString(received_message.Content, 0, received_message.Content.Length);
-            BleData receivedData = JsonConvert.DeserializeObject<BleData>(recMsg);
+            string recMsg = Encoding.UTF8.GetString(msg.Content, 0, msg.Content.Length);
+            Payload receivedData = JsonConvert.DeserializeObject<Payload>(recMsg);
+            double wattage = idleWattage;
 
-            float temperature = float.Parse(receivedData.Temperature, CultureInfo.InvariantCulture.NumberFormat); 
-            Dictionary<string, string> receivedProperties = received_message.Properties;
+            if (msg.Properties["source"] == SensorTypes.TEMPERATURE)
+            {
+                wattage = (receivedData.Value > 6.0) ? voltage * current : idleWattage;
+            }
 
-            Dictionary<string, string> properties = new Dictionary<string, string>();
-            properties.Add("source", receivedProperties["source"]);
-            properties.Add("macAddress", receivedProperties["macAddress"]);
-            properties.Add("temperatureAlert", temperature > 30 ? "true" : "false");
-
-            String content = String.Format("{0} \"deviceId\": \"Intel NUC Gateway\", \"messageId\": {1}, \"temperature\": {2} {3}", "{", ++this.messageCount, temperature, "}");
-            Message messageToPublish = new Message(content, properties);
-
-            this.broker.Publish(messageToPublish);
+            var payload = new Payload
+            {
+                Id = System.Guid.NewGuid().ToString(),
+                MessageId = messageId++,
+                Value = RandomNoise.NoisyReading(wattage)
+            };
+            var json = JsonConvert.SerializeObject(payload);
+            this.broker.Publish(new Message(json, properties));
         }
     }
 }

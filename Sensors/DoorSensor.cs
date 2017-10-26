@@ -39,21 +39,6 @@ namespace IoTEdgeFridgeSimulator
 
         public void Receive(Message received_message)
         {
-            string recMsg = Encoding.UTF8.GetString(received_message.Content, 0, received_message.Content.Length);
-            BleData receivedData = JsonConvert.DeserializeObject<BleData>(recMsg);
-
-            float temperature = float.Parse(receivedData.Temperature, CultureInfo.InvariantCulture.NumberFormat); 
-            Dictionary<string, string> receivedProperties = received_message.Properties;
-
-            Dictionary<string, string> properties = new Dictionary<string, string>();
-            properties.Add("source", receivedProperties["source"]);
-            properties.Add("macAddress", receivedProperties["macAddress"]);
-            properties.Add("temperatureAlert", temperature > 30 ? "true" : "false");
-
-            String content = String.Format("{0} \"deviceId\": \"Intel NUC Gateway\", \"messageId\": {1}, \"temperature\": {2} {3}", "{", ++this.messageCount, temperature, "}");
-            Message messageToPublish = new Message(content, properties);
-
-            this.broker.Publish(messageToPublish);
         }
     }
 }

@@ -3553,11 +3553,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Michael\\work\\iot-consumption\\FridgeModule\\FridgeModule.csproj",
-      "projectName": "FridgeModule",
-      "projectPath": "C:\\Users\\Michael\\work\\iot-consumption\\FridgeModule\\FridgeModule.csproj",
+      "projectUniqueName": "C:\\Users\\Michael\\work\\iot-consumption\\FridgeSimulator.csproj",
+      "projectName": "FridgeSimulator",
+      "projectPath": "C:\\Users\\Michael\\work\\iot-consumption\\FridgeSimulator.csproj",
       "packagesPath": "C:\\Users\\Michael\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Michael\\work\\iot-consumption\\FridgeModule\\obj\\",
+      "outputPath": "C:\\Users\\Michael\\work\\iot-consumption\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
