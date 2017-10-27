@@ -1,15 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
-
   <ItemGroup>
+    <PackageReference Include="CsvHelper" Version="4.0.3" />
     <PackageReference Include="Microsoft.Azure.Devices.Gateway.Module.NetStandard" Version="1.0.5" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.2" />
-  </ItemGroup> 
-
+  </ItemGroup>
   <ItemGroup>
     <None Update="gw-config.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

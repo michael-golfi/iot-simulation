@@ -7,9 +7,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Azure.Devices.Gateway;
 using Newtonsoft.Json;
-using IoTEdgeFridgeSimulator.Utils;
+using FridgeSimulator.Utils;
 
-namespace IoTEdgeFridgeSimulator
+namespace FridgeSimulator
 {
     /**
         Rules:
@@ -36,14 +36,22 @@ namespace IoTEdgeFridgeSimulator
 
         public void Start()
         {
-            var payload = new Payload
+            Task.Run(() =>
             {
-                Id = System.Guid.NewGuid().ToString(),
-                MessageId = messageId++,
-                Value = RandomNoise.NoisyReading(this.insideTemperature)
-            };
-            var json = JsonConvert.SerializeObject(payload);
-            this.broker.Publish(new Message(json, properties));
+                while (true)
+                {
+                    var payload = new Payload
+                    {
+                        Id = System.Guid.NewGuid().ToString(),
+                        MessageId = messageId++,
+                        Value = RandomNoise.NoisyReading(this.insideTemperature)
+                    };
+                    var json = JsonConvert.SerializeObject(payload);
+                    this.broker.Publish(new Message(json, properties));
+
+                    Thread.Sleep(Initial.REFRESH_INTERVAL);
+                }
+            });
         }
 
         public void Destroy()
@@ -55,31 +63,22 @@ namespace IoTEdgeFridgeSimulator
             string recMsg = Encoding.UTF8.GetString(msg.Content, 0, msg.Content.Length);
             Payload receivedData = JsonConvert.DeserializeObject<Payload>(recMsg);
 
-            if (msg.Properties["source"] == SensorTypes.DOOR)
+            if (msg.Properties["source"] == SensorTypes.DOOR && receivedData.BoolValue)
             {
                 // Temp should equalize to Thermostat temp
-                this.insideTemperature += 0.1 * this.outsideTemperature;
+                this.insideTemperature = Math.Min(this.insideTemperature + 0.1 * this.outsideTemperature, this.outsideTemperature);
             }
-            else if (msg.Properties["source"] == SensorTypes.POWER)
+            else if (msg.Properties["source"] == SensorTypes.POWER && receivedData.Value > 500)
             {
-                // Compressor is on, temp drops
-                this.insideTemperature -= 0.05 * this.insideTemperature;
+                // Compressor is on, temp drops, not below 0
+                this.insideTemperature = Math.Max(this.insideTemperature - 0.1 * this.insideTemperature, 0);
             }
             else if (msg.Properties["source"] == SensorTypes.THERMOSTAT)
             {
                 // Temp should go up minimally
                 this.outsideTemperature = receivedData.Value;
-                this.insideTemperature += 0.001 * receivedData.Value;
+                this.insideTemperature = Math.Min(this.insideTemperature + 0.001 * receivedData.Value, receivedData.Value);
             }
-
-            var payload = new Payload
-            {
-                Id = System.Guid.NewGuid().ToString(),
-                MessageId = messageId++,
-                Value = RandomNoise.NoisyReading(this.insideTemperature)
-            };
-            var json = JsonConvert.SerializeObject(payload);
-            this.broker.Publish(new Message(json, properties));
         }
     }
 }

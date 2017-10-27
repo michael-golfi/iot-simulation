@@ -1,24 +1,32 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using IoTEdgeFridgeSimulator.Utils;
+using System.IO;
+using CsvHelper;
+using FridgeSimulator.Utils;
 using Microsoft.Azure.Devices.Gateway;
 using Newtonsoft.Json;
 
-namespace PrinterModule
+namespace FridgeSimulator
 {
-    public class DotNetPrinterModule : IGatewayModule
+    class CsvData
+    {
+        public double Temperature { get; set; }
+        public double OutsideTemperature { get; set; }
+        public double Moisture { get; set; }
+        public double Power { get; set; }
+        public bool IsDoorOpen { get; set; }
+    }
+
+    public class AsyncLogger : IGatewayModule
     {
         private string configuration;
-
+        private static string filePath = "output.csv";
         private double temperature = Initial.TEMPERATURE;
         private double outsideTemperature = Initial.OUTSIDE_TEMP;
         private double moisture = Initial.MOISTURE;
-        private double power = Initial.POWER;
+        private double power = Initial.POWER_LOW;
         private bool isDoorOpen = Initial.DOOR_OPEN;
 
+        private CsvWriter csvWriter = new CsvWriter(new StreamWriter(filePath));
 
         public void Create(Broker broker, byte[] configuration)
         {
@@ -27,6 +35,25 @@ namespace PrinterModule
 
         public void Destroy()
         {
+            csvWriter.Flush();
+            csvWriter.Context.Dispose();
+        }
+
+        public void Start()
+        {
+            var record = new CsvData
+            {
+                Temperature = temperature,
+                OutsideTemperature = outsideTemperature,
+                Power = power,
+                Moisture = moisture,
+                IsDoorOpen = isDoorOpen
+            };
+
+            csvWriter.WriteHeader<CsvData>();
+            csvWriter.NextRecord();
+            csvWriter.WriteRecord(record);
+            csvWriter.NextRecord();
         }
 
         public void Receive(Message msg)
@@ -55,9 +82,17 @@ namespace PrinterModule
                     break;
             }
 
-            var line = String.Format("{{isDoorOpen:{0},moisture:{1},power:{2},temperature:{3},outsideTemperature:{4}}}",
-                isDoorOpen, moisture, power, temperature, outsideTemperature);
-            Console.WriteLine(line);
+            var record = new CsvData
+            {
+                Temperature = temperature,
+                OutsideTemperature = outsideTemperature,
+                Power = power,
+                Moisture = moisture,
+                IsDoorOpen = isDoorOpen
+            };
+
+            csvWriter.WriteRecord(record);
+            csvWriter.NextRecord();
         }
     }
 }

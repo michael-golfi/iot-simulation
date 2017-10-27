@@ -5,11 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using IoTEdgeFridgeSimulator.Utils;
+using FridgeSimulator.Utils;
 using Microsoft.Azure.Devices.Gateway;
 using Newtonsoft.Json;
 
-namespace IoTEdgeFridgeSimulator
+namespace FridgeSimulator
 {
     /**
         Rules:
@@ -21,6 +21,7 @@ namespace IoTEdgeFridgeSimulator
         private Broker broker;
         private string configuration;
         private int messageId;
+        private double power = Initial.POWER_LOW;
 
         Dictionary<string, string> properties = new Dictionary<string, string>{
             {"source", SensorTypes.POWER},
@@ -35,14 +36,22 @@ namespace IoTEdgeFridgeSimulator
 
         public void Start()
         {
-            var payload = new Payload
+            Task.Run(() =>
             {
-                Id = System.Guid.NewGuid().ToString(),
-                MessageId = messageId++,
-                Value = RandomNoise.NoisyReading(Initial.POWER_LOW)
-            };
-            var json = JsonConvert.SerializeObject(payload);
-            this.broker.Publish(new Message(json, properties));
+                while (true)
+                {
+                    var payload = new Payload
+                    {
+                        Id = System.Guid.NewGuid().ToString(),
+                        MessageId = messageId++,
+                        Value = RandomNoise.NoisyReading(power)
+                    };
+                    var json = JsonConvert.SerializeObject(payload);
+                    this.broker.Publish(new Message(json, properties));
+
+                    Thread.Sleep(Initial.REFRESH_INTERVAL);
+                }
+            });
         }
 
         public void Destroy()
@@ -53,19 +62,12 @@ namespace IoTEdgeFridgeSimulator
         {
             string recMsg = Encoding.UTF8.GetString(msg.Content, 0, msg.Content.Length);
             Payload receivedData = JsonConvert.DeserializeObject<Payload>(recMsg);
-            double wattage = Initial.POWER_LOW;
-
-            if (msg.Properties["source"] == SensorTypes.TEMPERATURE)
-                wattage = (receivedData.Value > 6.0) ? Initial.POWER_HIGH : Initial.POWER_LOW;
-
-            var payload = new Payload
-            {
-                Id = System.Guid.NewGuid().ToString(),
-                MessageId = messageId++,
-                Value = RandomNoise.NoisyReading(wattage)
-            };
-            var json = JsonConvert.SerializeObject(payload);
-            this.broker.Publish(new Message(json, properties));
+            power = (receivedData.Value > 6.0) ? Initial.POWER_HIGH : Initial.POWER_LOW;
+            if (receivedData.Value > 6.0)
+                power = Initial.POWER_HIGH;
+            if (receivedData.Value < 4)
+                power = Initial.POWER_LOW;
+            // Should stop once it hits 5 with a bit of momentum too
         }
     }
 }

@@ -5,11 +5,11 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using IoTEdgeFridgeSimulator.Utils;
+using FridgeSimulator.Utils;
 using Microsoft.Azure.Devices.Gateway;
 using Newtonsoft.Json;
 
-namespace IoTEdgeFridgeSimulator
+namespace FridgeSimulator
 {
     /**
         Rules:
@@ -35,14 +35,22 @@ namespace IoTEdgeFridgeSimulator
 
         public void Start()
         {
-            var payload = new Payload
+            Task.Run(() =>
             {
-                Id = System.Guid.NewGuid().ToString(),
-                MessageId = messageId++,
-                Value = RandomNoise.NoisyReading(this.outsideTemperature)
-            };
-            var json = JsonConvert.SerializeObject(payload);
-            this.broker.Publish(new Message(json, properties));
+                while (true)
+                {
+                    var payload = new Payload
+                    {
+                        Id = System.Guid.NewGuid().ToString(),
+                        MessageId = messageId++,
+                        Value = RandomNoise.NoisyReading(this.outsideTemperature)
+                    };
+                    var json = JsonConvert.SerializeObject(payload);
+                    this.broker.Publish(new Message(json, properties));
+
+                    Thread.Sleep(Initial.REFRESH_INTERVAL);
+                }
+            });
         }
 
         public void Destroy()
@@ -67,16 +75,6 @@ namespace IoTEdgeFridgeSimulator
                 // Compressor is on, outside temp rises
                 this.outsideTemperature *= 1.001;
             }
-
-            var payload = new Payload
-            {
-                Id = System.Guid.NewGuid().ToString(),
-                MessageId = messageId++,
-                Value = RandomNoise.NoisyReading(this.outsideTemperature)
-            };
-            var json = JsonConvert.SerializeObject(payload);
-            this.broker.Publish(new Message(json, properties));
         }
-
     }
 }

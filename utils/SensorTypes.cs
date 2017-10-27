@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace IoTEdgeFridgeSimulator.Utils
+namespace FridgeSimulator.Utils
 {
     public class SensorTypes
     {
